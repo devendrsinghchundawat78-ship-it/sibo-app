@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0B0B0B">
+<title>Sibo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B0B0B;
+    --card: #17171A;
+    --card-2: #1E1E22;
+    --border: rgba(255,255,255,0.08);
+    --text-hi: #F5F4F2;
+    --text-lo: #8C8A92;
+    --c-movie:#FF6B7A; --c-recipe:#FFB65C; --c-place:#5CD98A; --c-note:#6FA6FF; --c-link:#C77BFF;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{ margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text-hi); min-height:100vh; }
+  .app{ max-width:520px; margin:0 auto; padding-bottom:90px; min-height:100vh; }
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:18px 18px 8px; }
+  .brand{ font-family:'Playfair Display', serif; font-weight:700; font-size:26px; }
+  .top-icons{ display:flex; align-items:center; gap:16px; }
+  .top-icons span{ font-size:14px; font-weight:600; cursor:pointer; }
+  .icon-btn{ width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-size:18px; background:none; border:none; color:var(--text-hi); cursor:pointer; }
+
+  .cat-strip{ display:flex; gap:22px; overflow-x:auto; padding:18px 18px 6px; scrollbar-width:none; }
+  .cat-strip::-webkit-scrollbar{ display:none; }
+  .cat-item{ flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; }
+  .cat-icon-wrap{ position:relative; width:56px; height:56px; border-radius:16px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:26px; }
+  .cat-item.active .cat-icon-wrap{ border-color:rgba(255,255,255,0.4); }
+  .cat-badge{ position:absolute; top:-6px; right:-6px; background:#fff; color:#0B0B0B; font-size:10.5px; font-weight:800; min-width:18px; height:18px; border-radius:100px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+  .cat-label{ font-size:12px; color:var(--text-lo); font-weight:500; }
+  .cat-item.active .cat-label{ color:var(--text-hi); }
+
+  .section-title{ font-family:'Playfair Display', serif; font-weight:600; font-size:19px; padding:22px 18px 12px; display:flex; justify-content:space-between; align-items:center; }
+  .section-title .hint{ font-size:12px; color:var(--text-lo); font-family:'Inter',sans-serif; font-weight:500; }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 18px; }
+  .card{ background:var(--card); border:1px solid var(--border); border-radius:18px; overflow:hidden; position:relative; min-height:150px; display:flex; flex-direction:column; justify-content:space-between; }
+  .card.selected{ border-color:#fff; box-shadow:0 0 0 2px rgba(255,255,255,0.3) inset; }
+  .card-check{ position:absolute; top:8px; right:8px; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,0.5); border:1.5px solid rgba(255,255,255,0.6); display:none; align-items:center; justify-content:center; font-size:12px; }
+  .card.select-mode .card-check{ display:flex; }
+  .card.selected .card-check{ background:#fff; color:#0B0B0B; }
+  .card-art{ height:90px; display:flex; align-items:center; justify-content:center; font-size:34px; }
+  .card-art.movie{ background:linear-gradient(135deg, rgba(255,107,122,0.35), rgba(255,107,122,0.08)); }
+  .card-art.recipe{ background:linear-gradient(135deg, rgba(255,182,92,0.35), rgba(255,182,92,0.08)); }
+  .card-art.place{ background:linear-gradient(135deg, rgba(92,217,138,0.35), rgba(92,217,138,0.08)); }
+  .card-art.note{ background:linear-gradient(135deg, rgba(111,166,255,0.35), rgba(111,166,255,0.08)); }
+  .card-art.link{ background:linear-gradient(135deg, rgba(199,123,255,0.35), rgba(199,123,255,0.08)); }
+  .card-body{ padding:10px 12px 12px; }
+  .card-text{ font-size:13px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word; }
+  .card-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; }
+  .card-time{ font-size:10.5px; color:var(--text-lo); }
+  .card-del{ background:none; border:none; color:var(--text-lo); font-size:11px; cursor:pointer; }
+
+  .empty{ text-align:center; padding:70px 24px; color:var(--text-lo); }
+  .empty-emoji{ font-size:40px; margin-bottom:12px; }
+  .empty-title{ font-family:'Playfair Display', serif; font-size:18px; color:var(--text-hi); margin-bottom:6px; }
+  .empty-sub{ font-size:13.5px; }
+
+  .bottom-nav{ position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; background:rgba(11,11,11,0.92); backdrop-filter: blur(20px); border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-around; padding:12px 10px calc(12px + env(safe-area-inset-bottom)); z-index:20; }
+  .nav-btn{ background:none; border:none; font-size:20px; color:var(--text-lo); cursor:pointer; padding:6px; }
+  .nav-btn.active{ color:var(--text-hi); }
+  .fab-add{ position:fixed; bottom:74px; right:20px; z-index:15; width:46px; height:46px; border-radius:50%; background:var(--text-hi); color:#0B0B0B; font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; }
+
+  .modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:30; display:none; align-items:flex-end; }
+  .modal-overlay.open{ display:flex; }
+  .modal{ width:100%; background:var(--card-2); border-radius:24px 24px 0 0; padding:20px 18px calc(24px + env(safe-area-inset-bottom)); }
+  .modal-title{ font-family:'Playfair Display', serif; font-size:19px; margin-bottom:14px; }
+  .modal textarea{ width:100%; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; color:var(--text-hi); font-family:'Inter',sans-serif; font-size:14.5px; resize:none; min-height:70px; outline:none; }
+  .modal-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .m-chip{ padding:7px 14px; border-radius:100px; font-size:13px; font-weight:600; border:1px solid var(--border); background:var(--card); color:var(--text-lo); cursor:pointer; }
+  .m-chip.active[data-cat="movie"]{ background:var(--c-movie); border-color:var(--c-movie); color:#1a0508;}
+  .m-chip.active[data-cat="recipe"]{ background:var(--c-recipe); border-color:var(--c-recipe); color:#1a1105;}
+  .m-chip.active[data-cat="place"]{ background:var(--c-place); border-color:var(--c-place); color:#04180b;}
+  .m-chip.active[data-cat="note"]{ background:var(--c-note); border-color:var(--c-note); color:#050f1a;}
+  .m-chip.active[data-cat="link"]{ background:var(--c-link); border-color:var(--c-link); color:#12051a;}
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+  .m-cancel{ background:none; border:none; color:var(--text-lo); font-size:14px; font-weight:600; padding:10px 16px; cursor:pointer; }
+  .m-save{ background:var(--text-hi); color:#0B0B0B; border:none; font-weight:700; font-size:14px; padding:10px 22px; border-radius:100px; cursor:pointer; }
+  .m-save:disabled{ opacity:0.35; }
+
+  /* share bar */
+  .share-bar{ position:fixed; bottom:74px; left:0; right:0; max-width:520px; margin:0 auto; display:none; justify-content:center; z-index:16; }
+  .share-bar.show{ display:flex; }
+  .share-btn{ background:#25D366; color:#04170a; border:none; font-weight:700; font-size:14px; padding:12px 24px; border-radius:100px; display:flex; align-items:center; gap:8px; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.4); }
+
+  /* Notes screen */
+  .notes-page{ padding:18px; }
+  .note-bubble{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px 14px; margin-bottom:10px; font-size:14px; line-height:1.5; }
+  .note-time{ font-size:11px; color:var(--text-lo); margin-top:6px; }
+  .note-input-row{ position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; background:var(--bg); border-top:1px solid var(--border); padding:12px 14px calc(12px + env(safe-area-inset-bottom)); display:flex; gap:8px; z-index:25; }
+  .note-input-row input{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:100px; padding:11px 16px; color:var(--text-hi); font-size:14px; outline:none; }
+  .note-send{ background:var(--c-note); border:none; color:#050f1a; width:42px; height:42px; border-radius:50%; font-size:16px; cursor:pointer; }
+  .back-row{ display:flex; align-items:center; gap:10px; padding:18px 18px 4px; }
+  .back-btn{ background:none; border:none; color:var(--text-hi); font-size:20px; cursor:pointer; }
+  .screen-title{ font-family:'Playfair Display', serif; font-weight:700; font-size:22px; }
+
+  /* Browser screen */
+  .browser-bar{ display:flex; gap:8px; padding:14px 18px; }
+  .browser-bar input{ flex:1; background:var(--card); border:1px solid var(--border); border-radius:100px; padding:11px 16px; color:var(--text-hi); font-size:14px; outline:none; }
+  .browser-go{ background:var(--text-hi); color:#0B0B0B; border:none; border-radius:100px; padding:0 18px; font-weight:700; cursor:pointer; }
+  .browser-frame-wrap{ padding:0 18px; }
+  iframe#browserFrame{ width:100%; height:60vh; border:1px solid var(--border); border-radius:16px; background:var(--card); }
+  .browser-fallback{ text-align:center; padding:30px 18px; color:var(--text-lo); font-size:13.5px; }
+  .browser-fallback a{ color:var(--c-note); }
+
+  /* Profile screen */
+  .profile-page{ padding:18px; }
+  .stat-row{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .stat-card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px 16px; flex:1; min-width:100px; }
+  .stat-num{ font-family:'Playfair Display', serif; font-size:24px; font-weight:700; }
+  .stat-label{ font-size:12px; color:var(--text-lo); margin-top:2px; }
+  .setting-row{ display:flex; justify-content:space-between; align-items:center; padding:14px 4px; border-bottom:1px solid var(--border); font-size:14.5px; }
+  .danger-btn{ background:rgba(255,107,122,0.12); color:var(--c-movie); border:1px solid rgba(255,107,122,0.3); padding:10px 16px; border-radius:100px; font-weight:600; font-size:13.5px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- LIBRARY SCREEN -->
+  <div class="screen active" id="screen-library">
+    <div class="topbar">
+      <div class="brand">Sibo</div>
+      <div class="top-icons">
+        <span id="selectToggle">Select</span>
+        <button class="icon-btn" id="bellBtn">🔔</button>
+        <button class="icon-btn" id="chatTopBtn">💬</button>
+      </div>
+    </div>
+    <div class="cat-strip" id="catStrip"></div>
+    <div class="section-title">Library</div>
+    <div id="gridWrap"></div>
+  </div>
+
+  <!-- NOTES / CHAT SCREEN -->
+  <div class="screen" id="screen-notes">
+    <div class="back-row">
+      <button class="back-btn" data-back="library">←</button>
+      <div class="screen-title">Notes</div>
+    </div>
+    <div class="notes-page" id="notesWrap"></div>
+    <div class="note-input-row">
+      <input type="text" id="noteInput" placeholder="Note ya reminder likho...">
+      <button class="note-send" id="noteSend">➤</button>
+    </div>
+  </div>
+
+  <!-- BROWSER SCREEN -->
+  <div class="screen" id="screen-browser">
+    <div class="back-row">
+      <button class="back-btn" data-back="library">←</button>
+      <div class="screen-title">Browser</div>
+    </div>
+    <div class="browser-bar">
+      <input type="text" id="browserUrl" placeholder="Website address likho... e.g. wikipedia.org">
+      <button class="browser-go" id="browserGo">Go</button>
+    </div>
+    <div class="browser-frame-wrap" id="browserFrameWrap" style="display:none;">
+      <iframe id="browserFrame"></iframe>
+    </div>
+    <div class="browser-fallback" id="browserFallback">
+      Website ka address daalo aur "Go" dabao.<br>Kuch websites security ki wajah se andar load nahi hoti — tab niche "browser mein kholo" ka link milega.
+    </div>
+  </div>
+
+  <!-- PROFILE SCREEN -->
+  <div class="screen" id="screen-profile">
+    <div class="back-row">
+      <button class="back-btn" data-back="library">←</button>
+      <div class="screen-title">Profile</div>
+    </div>
+    <div class="profile-page">
+      <div class="stat-row" id="statRow"></div>
+      <div class="setting-row"><span>App version</span><span style="color:var(--text-lo)">1.0</span></div>
+      <div class="setting-row"><span>Data storage</span><span style="color:var(--text-lo)">Is phone par hi</span></div>
+      <div style="margin-top:20px;">
+        <button class="danger-btn" id="clearAllBtn">Sab data clear karo</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<button class="fab-add" id="fabAdd">+</button>
+
+<div class="share-bar" id="shareBar">
+  <button class="share-btn" id="shareWhatsapp">📤 WhatsApp / Share (<span id="shareCount">0</span>)</button>
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" data-nav="library">🏠</button>
+  <button class="nav-btn" data-nav="browser">🌐</button>
+  <button class="nav-btn" id="navAdd">➕</button>
+  <button class="nav-btn" data-nav="share">👥</button>
+  <button class="nav-btn" data-nav="profile">👤</button>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Naya save karo</div>
+    <textarea id="input" placeholder="Movie, recipe, jagah, note, ya link..."></textarea>
+    <div class="modal-chips" id="chips">
+      <div class="m-chip active" data-cat="note">📝 Note</div>
+      <div class="m-chip" data-cat="movie">🎬 Films</div>
+      <div class="m-chip" data-cat="recipe">🍲 Recipe</div>
+      <div class="m-chip" data-cat="place">📍 Jagah</div>
+      <div class="m-chip" data-cat="link">🔗 Link</div>
+    </div>
+    <div class="modal-actions">
+      <button class="m-cancel" id="cancelBtn">Cancel</button>
+      <button class="m-save" id="saveBtn" disabled>Save karo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let items = [];
+let notes = [];
+let activeCat = 'note';
+let activeFilter = 'all';
+let selectMode = false;
+let selectedIds = new Set();
+
+const catMeta = {
+  movie:{label:'Films', icon:'🎬'}, recipe:{label:'Recipe', icon:'🍲'},
+  place:{label:'Jagah', icon:'📍'}, note:{label:'Note', icon:'📝'}, link:{label:'Link', icon:'🔗'}
+};
+
+const catStrip = document.getElementById('catStrip');
+const gridWrap = document.getElementById('gridWrap');
+const modalOverlay = document.getElementById('modalOverlay');
+const input = document.getElementById('input');
+const chips = document.getElementById('chips');
+const saveBtn = document.getElementById('saveBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const shareBar = document.getElementById('shareBar');
+const shareCount = document.getElementById('shareCount');
+
+/* ---------- storage ---------- */
+function loadAll(){
+  try{ items = JSON.parse(localStorage.getItem('sibo:items') || '[]'); }catch(e){ items = []; }
+  try{ notes = JSON.parse(localStorage.getItem('sibo:notes') || '[]'); }catch(e){ notes = []; }
+}
+function persistItems(){ try{ localStorage.setItem('sibo:items', JSON.stringify(items)); }catch(e){} }
+function persistNotes(){ try{ localStorage.setItem('sibo:notes', JSON.stringify(notes)); }catch(e){} }
+
+/* ---------- screen navigation ---------- */
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
+  if(name === 'notes') renderNotes();
+  if(name === 'profile') renderProfile();
+}
+document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.back)));
+document.getElementById('chatTopBtn').addEventListener('click', () => showScreen('notes'));
+
+document.querySelectorAll('.nav-btn[data-nav]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const nav = btn.dataset.nav;
+    if(nav === 'share'){
+      selectMode = !selectMode;
+      selectedIds.clear();
+      renderGrid();
+      shareBar.classList.toggle('show', selectMode);
+      showScreen('library');
+      return;
+    }
+    showScreen(nav);
+  });
+});
+
+/* ---------- add modal ---------- */
+function openModal(){ modalOverlay.classList.add('open'); input.value=''; saveBtn.disabled=true; setTimeout(()=>input.focus(),150); }
+function closeModal(){ modalOverlay.classList.remove('open'); }
+document.getElementById('fabAdd').addEventListener('click', openModal);
+document.getElementById('navAdd').addEventListener('click', openModal);
+cancelBtn.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => { if(e.target === modalOverlay) closeModal(); });
+chips.addEventListener('click', (e) => {
+  const chip = e.target.closest('.m-chip'); if(!chip) return;
+  document.querySelectorAll('.m-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active'); activeCat = chip.dataset.cat;
+});
+input.addEventListener('input', () => { saveBtn.disabled = input.value.trim().length === 0; });
+saveBtn.addEventListener('click', () => {
+  const text = input.value.trim(); if(!text) return;
+  items.unshift({ id: Date.now().toString(), text, cat: activeCat, ts: Date.now() });
+  persistItems(); closeModal(); render();
+});
+
+/* ---------- helpers ---------- */
+function escapeHtml(str){ const d = document.createElement('div'); d.innerText = str; return d.innerHTML; }
+function timeAgo(ts){
+  const diff = Date.now() - ts; const mins = Math.floor(diff/60000);
+  if(mins < 1) return 'abhi'; if(mins < 60) return mins + 'm';
+  const hrs = Math.floor(mins/60); if(hrs < 24) return hrs + 'h';
+  const days = Math.floor(hrs/24); if(days < 7) return days + 'd';
+  return new Date(ts).toLocaleDateString('en-IN', {day:'numeric', month:'short'});
+}
+
+/* ---------- library / grid ---------- */
+function deleteItem(id){ items = items.filter(i => i.id !== id); persistItems(); render(); }
+
+function renderCatStrip(){
+  const counts = {}; items.forEach(i => counts[i.cat] = (counts[i.cat]||0) + 1);
+  const cats = ['movie','recipe','place','note','link'];
+  catStrip.innerHTML = `
+    <div class="cat-item ${activeFilter==='all'?'active':''}" data-filter="all">
+      <div class="cat-icon-wrap">✨</div><div class="cat-label">Sab</div>
+    </div>` + cats.map(c => `
+    <div class="cat-item ${activeFilter===c?'active':''}" data-filter="${c}">
+      <div class="cat-icon-wrap">${catMeta[c].icon}${counts[c] ? `<div class="cat-badge">${counts[c]}</div>` : ''}</div>
+      <div class="cat-label">${catMeta[c].label}</div>
+    </div>`).join('');
+}
+catStrip.addEventListener('click', (e) => {
+  const item = e.target.closest('.cat-item'); if(!item) return;
+  activeFilter = item.dataset.filter; render();
+});
+
+function toggleSelect(id){
+  if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  shareCount.textContent = selectedIds.size;
+  renderGrid();
+}
+
+function renderGrid(){
+  const filtered = activeFilter === 'all' ? items : items.filter(i => i.cat === activeFilter);
+  if(filtered.length === 0){
+    gridWrap.innerHTML = `<div class="empty"><div class="empty-emoji">✨</div><div class="empty-title">Abhi kuch save nahi hai</div><div class="empty-sub">Neeche + dabao aur pehli cheez save karo</div></div>`;
+    return;
+  }
+  gridWrap.innerHTML = `<div class="grid">${filtered.map(item => `
+    <div class="card ${selectMode?'select-mode':''} ${selectedIds.has(item.id)?'selected':''}" onclick="${selectMode ? `toggleSelect('${item.id}')` : ''}">
+      <div class="card-check">✓</div>
+      <div class="card-art ${item.cat}">${catMeta[item.cat].icon}</div>
+      <div class="card-body">
+        <div class="card-text">${escapeHtml(item.text)}</div>
+        <div class="card-foot">
+          <span class="card-time">${timeAgo(item.ts)}</span>
+          ${selectMode ? '' : `<button class="card-del" onclick="event.stopPropagation(); deleteItem('${item.id}')">Hatao</button>`}
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+document.getElementById('selectToggle').addEventListener('click', () => {
+  selectMode = !selectMode; selectedIds.clear();
+  shareBar.classList.toggle('show', selectMode);
+  renderGrid();
+});
+
+document.getElementById('shareWhatsapp').addEventListener('click', () => {
+  const chosen = items.filter(i => selectedIds.has(i.id));
+  if(chosen.length === 0) return;
+  const text = chosen.map(i => `${catMeta[i.cat].icon} ${i.text}`).join('\n\n');
+  if(navigator.share){
+    navigator.share({ text }).catch(()=>{});
+  }else{
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  }
+});
+
+function render(){ renderCatStrip(); renderGrid(); }
+
+/* ---------- notes / chat screen ---------- */
+const notesWrap = document.getElementById('notesWrap');
+const noteInput = document.getElementById('noteInput');
+document.getElementById('noteSend').addEventListener('click', addNote);
+noteInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') addNote(); });
+
+function addNote(){
+  const text = noteInput.value.trim(); if(!text) return;
+  notes.unshift({ id: Date.now().toString(), text, ts: Date.now() });
+  persistNotes(); noteInput.value = ''; renderNotes();
+}
+function deleteNote(id){ notes = notes.filter(n => n.id !== id); persistNotes(); renderNotes(); }
+
+function renderNotes(){
+  if(notes.length === 0){
+    notesWrap.innerHTML = `<div class="empty"><div class="empty-emoji">📝</div><div class="empty-title">Koi note nahi hai</div><div class="empty-sub">Neeche type karke bhejo</div></div>`;
+    return;
+  }
+  notesWrap.innerHTML = notes.map(n => `
+    <div class="note-bubble">
+      ${escapeHtml(n.text)}
+      <div class="note-time">${timeAgo(n.ts)} · <span style="cursor:pointer; text-decoration:underline;" onclick="deleteNote('${n.id}')">hatao</span></div>
+    </div>`).join('');
+}
+
+/* ---------- browser screen ---------- */
+const browserUrl = document.getElementById('browserUrl');
+const browserFrame = document.getElementById('browserFrame');
+const browserFrameWrap = document.getElementById('browserFrameWrap');
+const browserFallback = document.getElementById('browserFallback');
+document.getElementById('browserGo').addEventListener('click', goBrowser);
+browserUrl.addEventListener('keydown', (e) => { if(e.key === 'Enter') goBrowser(); });
+
+function goBrowser(){
+  let url = browserUrl.value.trim();
+  if(!url) return;
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  browserFrame.src = url;
+  browserFrameWrap.style.display = 'block';
+  browserFallback.innerHTML = `Load nahi ho raha? <a href="${url}" target="_blank" rel="noopener">Browser mein kholo →</a>`;
+}
+
+/* ---------- profile screen ---------- */
+function renderProfile(){
+  const total = items.length;
+  const counts = {}; items.forEach(i => counts[i.cat] = (counts[i.cat]||0) + 1);
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Total saved</div></div>
+    <div class="stat-card"><div class="stat-num">${notes.length}</div><div class="stat-label">Notes</div></div>
+    <div class="stat-card"><div class="stat-num">${counts.movie||0}</div><div class="stat-label">Films</div></div>
+  `;
+}
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  if(confirm('Pura data delete ho jayega. Pakka?')){
+    items = []; notes = [];
+    persistItems(); persistNotes();
+    render(); renderProfile();
+  }
+});
+
+loadAll();
+render();
+</script>
+
+</body>
+</html>
